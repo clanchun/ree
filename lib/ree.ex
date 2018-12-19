@@ -4,8 +4,9 @@ defmodule Ree do
       {:error, reason} ->
         IO.puts(reason)
 
-      {:ok, {script, script_args, name_type, remote_nodes}} ->
+      {:ok, {script, script_args, cookie, name_type, remote_nodes}} ->
         :net_kernel.start([:ree, name_type])
+        :erlang.set_cookie(Node.self(), String.to_atom(cookie))
         modules = Code.compile_file(script)
 
         remote_nodes
@@ -38,15 +39,15 @@ defmodule Ree do
 
   defp parse_args(args) do
     case args do
-      [script, name, "-t" | targets] when name in ["-s", "-l"] ->
-        {:ok, {script, [], get_name_type(name), get_remote_nodes(targets)}}
+      [script, name, "-c", cookie, "-t" | targets] when name in ["-s", "-l"] ->
+        {:ok, {script, [], cookie, get_name_type(name), get_remote_nodes(targets)}}
 
       [script | t] ->
         script_args = extract_script_args(t)
 
         case t -- script_args do
-          [name, "-t" | targets] ->
-            {:ok, {script, script_args, get_name_type(name), get_remote_nodes(targets)}}
+          [name, "-c", cookie, "-t" | targets] ->
+            {:ok, {script, script_args, cookie, get_name_type(name), get_remote_nodes(targets)}}
 
           _ ->
             {:error, "invalid arguments"}
